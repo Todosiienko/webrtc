@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>WebRTC Receiver</title>
+</head>
+<body>
+
+<h2>WebRTC Receiver</h2>
+<video id="remoteVideo" autoplay playsinline muted style="background:black"></video>
+
+<script>
+  const video = document.getElementById("remoteVideo");
+
+  const pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+
+  pc.ontrack = (event) => {
+    console.log("🎥 Track received", event.streams);
+    video.srcObject = event.streams[0];
+  };
+
+  pc.onicecandidate = (e) => {
+    if (e.candidate) {
+      console.log("⬆️ Browser ICE");
+      signaling.sendSignal({ candidate: e.candidate });
+    }
+  };
+
+  // -------------------
+  // signaling
+  // -------------------
+  const ws = new WebSocket("ws://localhost:3000");
+
+  const signaling = {
+    sendSignal(signal) {
+      ws.send(JSON.stringify({ type: "signal", signal }));
+    }
+  };
+
+  ws.onopen = () => {
+    console.log("🔌 WS connected");
+    ws.send(JSON.stringify({ type: "join", roomId: "room-123", peerType:'browser '+ window.navigator.userAgent, role:"receiver" }));
+  };
+
+  ws.onmessage = async (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type !== "signal") return;
+
+    const signal = data.signal;
+    console.log("⬇️ Signal received", signal);
+
+    if (signal.sdp) {
+      await pc.setRemoteDescription(signal.sdp);
+      console.log("✅ Remote SDP set:", signal.sdp.type);
+
+      if (signal.sdp.type === "offer") {
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        signaling.sendSignal({ sdp: pc.localDescription });
+        console.log("⬆️ Answer sent");
+      }
+    }
+
+    if (signal.candidate) {
+      await pc.addIceCandidate(signal.candidate);
+      console.log("➕ ICE added");
+    }
+  };
+</script>
+
+</body>
+</html>
