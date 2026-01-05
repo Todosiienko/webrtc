@@ -10,7 +10,7 @@ window.addEventListener('load', async () => {
   // -------------------
   const pendingCandidates = [];
 
-  let receiverReady = false; // чекатимемо, поки receiver приєднається
+  let receiverReady = false; // wait until receiver will join
   let offerSent = false;
 
   const signaling = createSignaling({
@@ -19,7 +19,7 @@ window.addEventListener('load', async () => {
     onSignal: async (signal) => {
       console.log("⬇️ Signal received:", signal);
 
-      // --- обробка peer-joined ---
+      // --- handle peer-joined ---
       if (signal.peerJoined) {
         console.log("👋 Receiver joined, ready to send offer");
         receiverReady = true;
@@ -34,12 +34,12 @@ window.addEventListener('load', async () => {
         return;
       }
 
-      // --- обробка SDP ---
+      // --- handle SDP ---
       if (signal.sdp) {
         await pc.setRemoteDescription(signal.sdp);
         console.log("✅ Remote SDP set:", signal.sdp.type);
 
-        // Додаємо ICE кандидати, що прийшли раніше
+        // add ICE candidates, who came earlier
         pendingCandidates.forEach(c => pc.addIceCandidate(c));
         pendingCandidates.length = 0;
 
@@ -51,7 +51,7 @@ window.addEventListener('load', async () => {
         }
       }
 
-      // --- обробка ICE candidates ---
+      // --- handle ICE candidates ---
       if (signal.candidate) {
         if (pc.remoteDescription) {
           await pc.addIceCandidate(signal.candidate);
@@ -80,7 +80,7 @@ window.addEventListener('load', async () => {
   };
 
   // -------------------
-  // 3️⃣ Screen capture (Web API)
+  // Screen capture (Web API)
   // -------------------
   async function getScreenStream() {
     console.log("🖥️ Requesting screen capture...");
@@ -102,7 +102,7 @@ window.addEventListener('load', async () => {
 
   stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-  // Локальне відео (дебаг)
+  // local video for debug
   const localVideo = document.querySelector("#localVideo");
   if (localVideo) {
     localVideo.srcObject = stream;
@@ -111,7 +111,7 @@ window.addEventListener('load', async () => {
   }
 
   // -------------------
-  // 4️⃣ Не надсилаємо offer відразу — чекаємо peer-joined
+  // 4️⃣ do not send offer immediately — wait for peer-joined
   // -------------------
   signaling.ws.onopen = () => {
     console.log("🔌 Signaling connected");

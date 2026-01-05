@@ -12,7 +12,7 @@ function createWindow() {
     }
   });
 
-  // 🔥 ДОЗВОЛЯЄ getDisplayMedia
+  // allow getDisplayMedia
   session.defaultSession.setDisplayMediaRequestHandler(
     (request, callback) => {
       desktopCapturer.getSources({ types: ['screen', 'window'] }).then(sources => {
@@ -33,6 +33,6 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  // На macOS стандарт — не виходити при закритті всіх вікон
+  // macOS doesn't quit when yoy close all windows 
   if (process.platform !== 'darwin') app.quit();
 });
